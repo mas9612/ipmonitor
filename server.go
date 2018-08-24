@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
@@ -54,7 +55,32 @@ func hostsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func hostHandler(w http.ResponseWriter, r *http.Request) {
+	db, err := gorm.Open("sqlite3", "test.db")
+	if err != nil {
+		log.Println("[ERROR] /hosts: failed to open DB", err)
+		return
+	}
+	defer db.Close()
 
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		replyError(w, http.StatusBadRequest, "Key \"id\" must be integer")
+		return
+	}
+
+	var host HostModel
+	err = db.Where("id = ?", id).Find(&host).Error
+	if err != nil {
+		replyError(w, http.StatusNotFound, fmt.Sprintf("ID \"%d\" not found", id))
+		return
+	}
+	replyJSON(w, http.StatusOK, HostsResponse{
+		Count: 1,
+		Hosts: []Host{
+			Host{ID: host.ID, Address: host.Address, Hostname: host.Hostname, Description: host.Description},
+		},
+	})
 }
 
 func replyJSON(w http.ResponseWriter, status int, data interface{}) {

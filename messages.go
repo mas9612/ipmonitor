@@ -14,6 +14,7 @@ type HostsResponse struct {
 
 // Host represents a host information
 type Host struct {
+	ID          uint   `json:"id"`
 	Address     string `json:"address"`
 	Hostname    string `json:"hostname"`
 	Description string `json:"description"`
