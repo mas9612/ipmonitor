@@ -7,6 +7,9 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/gorm"
+	// for gorm to use sqlite
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
 // NewHTTPHandler returns *mux.Router
@@ -19,18 +22,32 @@ func NewHTTPHandler() *mux.Router {
 }
 
 func hostsHandler(w http.ResponseWriter, r *http.Request) {
+	db, err := gorm.Open("sqlite3", "test.db")
+	if err != nil {
+		log.Println("[ERROR] /hosts: failed to open DB", err)
+		return
+	}
+	defer db.Close()
+
+	var hosts []HostModel
+	err = db.Find(&hosts).Error
+	if err != nil {
+		log.Println("[ERROR] /hosts: failed to get host records:", err)
+		return
+	}
+
 	switch r.Method {
 	case http.MethodGet:
-		hosts := []Host{
-			{Address: "10.1.240.151", Hostname: "k8s-01", Description: "k8s node #1"},
-			{Address: "10.1.240.152", Hostname: "k8s-02", Description: "k8s node #2"},
-			{Address: "10.1.240.153", Hostname: "k8s-03", Description: "k8s node #3"},
+		res := make([]Host, len(hosts))
+		for i, host := range hosts {
+			res[i].Address = host.Address
+			res[i].Hostname = host.Hostname
+			res[i].Description = host.Description
 		}
-		res := HostsResponse{
-			Count: len(hosts),
-			Hosts: hosts,
-		}
-		replyJSON(w, http.StatusOK, res)
+		replyJSON(w, http.StatusOK, HostsResponse{
+			Count: len(res),
+			Hosts: res,
+		})
 		return
 	}
 	replyError(w, http.StatusMethodNotAllowed, fmt.Sprintf("Method %s is not allowed in this URL", r.Method))
