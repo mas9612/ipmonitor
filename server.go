@@ -20,17 +20,10 @@ func NewHTTPHandler() *mux.Router {
 }
 
 func hostsHandler(w http.ResponseWriter, r *http.Request) {
-	db, err := openDB()
-	if err != nil {
-		log.Println("[ERROR] /hosts: failed to open DB", err)
-		return
-	}
-	defer db.Close()
-
 	switch r.Method {
 	case http.MethodGet:
 		var hosts []Host
-		err := db.Find(&hosts).Error
+		err := Conn.DB.Find(&hosts).Error
 		if err != nil {
 			log.Println("[ERROR] /hosts: failed to get host records:", err)
 			return
@@ -60,7 +53,7 @@ func hostsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		result := db.Create(&host)
+		result := Conn.DB.Create(&host)
 		if result.Error != nil {
 			replyError(w, http.StatusInternalServerError, "Internal Server Error occured.")
 			return
@@ -72,13 +65,6 @@ func hostsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func hostHandler(w http.ResponseWriter, r *http.Request) {
-	db, err := openDB()
-	if err != nil {
-		log.Println("[ERROR] /hosts: failed to open DB:", err)
-		return
-	}
-	defer db.Close()
-
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -89,7 +75,7 @@ func hostHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		var host Host
-		err = db.Where("id = ?", id).Find(&host).Error
+		err = Conn.DB.Where("id = ?", id).Find(&host).Error
 		if err != nil {
 			replyError(w, http.StatusNotFound, fmt.Sprintf("ID \"%d\" not found", id))
 			return
