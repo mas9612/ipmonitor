@@ -28,7 +28,7 @@ type TestHostRequest struct {
 
 type TestHostResponse struct {
 	StatusCode int
-	HostsResponse
+	Response   interface{}
 }
 
 func TestMain(m *testing.M) {
@@ -50,7 +50,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestHostsHandler(t *testing.T) {
-	// TODO: add test case if error returned
+	// TODO: fix to use "unittest.db"
+	// TODO: add test which compare response
 	router := NewHTTPHandler()
 
 	values := []TestHostsValue{
@@ -68,6 +69,16 @@ func TestHostsHandler(t *testing.T) {
 			Method: "GET",
 			Input:  TestHostRequest{},
 			Expect: TestHostResponse{http.StatusOK, HostsResponse{Count: 1, Hosts: []Host{Host{Address: "10.1.240.151", Hostname: "k8s-01", Description: "k8s node #1"}}}},
+		},
+		TestHostsValue{
+			Method: "POST",
+			Input:  TestHostRequest{Address: "10.1.240.151"},
+			Expect: TestHostResponse{http.StatusBadRequest, ErrorResponse{Status: http.StatusBadRequest, Message: "Key \"address\" and \"hostname\" are required"}},
+		},
+		TestHostsValue{
+			Method: "POST",
+			Input:  TestHostRequest{Hostname: "k8s-02"},
+			Expect: TestHostResponse{http.StatusBadRequest, ErrorResponse{Status: http.StatusBadRequest, Message: "Key \"address\" and \"hostname\" are required"}},
 		},
 	}
 
