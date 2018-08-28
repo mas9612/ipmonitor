@@ -6,6 +6,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
+// Conn stores opened DB connection
 var Conn *DBConnection
 
 // DBConnection stores DB connection
