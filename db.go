@@ -1,29 +1,30 @@
 package ipmonitor
 
 import (
-	"log"
-
 	"github.com/jinzhu/gorm"
 	// for gorm to use sqlite
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
-// InitDB initializes DB
-func InitDB() {
-	db, err := gorm.Open("sqlite3", "test.db")
-	if err != nil {
-		log.Println("[ERROR] /hosts: failed to open DB:", err)
-		return
-	}
-	defer db.Close()
+// Conn stores opened DB connection
+var Conn *DBConnection
 
-	db.AutoMigrate(&Host{})
+// DBConnection stores DB connection
+type DBConnection struct {
+	DB *gorm.DB
 }
 
-func openDB() (*gorm.DB, error) {
-	db, err := gorm.Open("sqlite3", "test.db")
+// InitDB initializes DB
+func InitDB() {
+	Conn.DB.AutoMigrate(&Host{})
+}
+
+// OpenDB open DB connection and store it to DBConnection struct
+func OpenDB(dbname string) error {
+	db, err := gorm.Open("sqlite3", dbname)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return db, nil
+	Conn = &DBConnection{DB: db}
+	return nil
 }
