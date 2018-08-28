@@ -80,12 +80,7 @@ func hostHandler(w http.ResponseWriter, r *http.Request) {
 			replyError(w, http.StatusNotFound, fmt.Sprintf("ID \"%d\" not found", id))
 			return
 		}
-		replyJSON(w, http.StatusOK, HostsResponse{
-			Count: 1,
-			Hosts: []Host{
-				Host{ID: host.ID, Address: host.Address, Hostname: host.Hostname, Description: host.Description},
-			},
-		})
+		replyJSON(w, http.StatusOK, Host{ID: host.ID, Address: host.Address, Hostname: host.Hostname, Description: host.Description})
 		return
 	}
 	replyError(w, http.StatusMethodNotAllowed, fmt.Sprintf("Method %s is not allowed in this URL", r.Method))
