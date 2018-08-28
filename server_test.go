@@ -21,6 +21,13 @@ type TestHostsValue struct {
 	Expect TestHostResponse
 }
 
+type TestHostValue struct {
+	Name     string
+	Method   string
+	Endpoint string
+	Expect   interface{}
+}
+
 type TestHostRequest struct {
 	Address     string `json:"address"`
 	Hostname    string `json:"hostname"`
@@ -50,7 +57,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestHostsHandler(t *testing.T) {
-	// TODO: add test which compare response
 	router := NewHTTPHandler()
 
 	values := []TestHostsValue{
@@ -130,7 +136,54 @@ func TestHostsHandler(t *testing.T) {
 }
 
 func TestHostHandler(t *testing.T) {
+	router := NewHTTPHandler()
+	// init test data
+	values := []TestHostValue{
+		TestHostValue{
+			Name:     "Non-Integer Key",
+			Method:   "GET",
+			Endpoint: "/hosts/x",
+			Expect:   ErrorResponse{Status: http.StatusBadRequest, Message: "Key \"id\" must be integer"},
+		},
+		TestHostValue{
+			Name:     "Not Found Key",
+			Method:   "GET",
+			Endpoint: "/hosts/9999",
+			Expect:   ErrorResponse{Status: http.StatusNotFound, Message: "ID \"9999\" not found"},
+		},
+		TestHostValue{
+			Name:     "Get first record",
+			Method:   "GET",
+			Endpoint: "/hosts/1",
+			Expect:   HostsResponse{Count: 1, Hosts: []Host{Host{ID: 1, Address: "10.1.240.151", Hostname: "k8s-01", Description: "k8s node #1"}}},
+		},
+	}
 
+	for _, v := range values {
+		req := httptest.NewRequest(v.Method, v.Endpoint, nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+		res := rr.Result()
+
+		switch expect := v.Expect.(type) {
+		case ErrorResponse:
+			var err ErrorResponse
+			body, _ := ioutil.ReadAll(res.Body)
+			json.Unmarshal(body, &err)
+			checkErrorResponse(t, v.Name, err, expect)
+		case HostsResponse:
+			var hosts HostsResponse
+			body, _ := ioutil.ReadAll(res.Body)
+			json.Unmarshal(body, &hosts)
+
+			if hosts.Count != expect.Count {
+				t.Errorf("'%s': Wrong hosts count was returned. '%d' != '%d'", v.Name, hosts.Count, expect.Count)
+			}
+			for i := range hosts.Hosts {
+				checkHostResponse(t, v.Name, hosts.Hosts[i], expect.Hosts[i])
+			}
+		}
+	}
 }
 
 func checkHostResponse(t *testing.T, testcase string, res, expected Host) {
