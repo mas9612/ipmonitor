@@ -155,7 +155,7 @@ func TestHostHandler(t *testing.T) {
 			Name:     "Get first record",
 			Method:   "GET",
 			Endpoint: "/hosts/1",
-			Expect:   HostsResponse{Count: 1, Hosts: []Host{Host{ID: 1, Address: "10.1.240.151", Hostname: "k8s-01", Description: "k8s node #1"}}},
+			Expect:   Host{ID: 1, Address: "10.1.240.151", Hostname: "k8s-01", Description: "k8s node #1"},
 		},
 	}
 
@@ -171,17 +171,11 @@ func TestHostHandler(t *testing.T) {
 			body, _ := ioutil.ReadAll(res.Body)
 			json.Unmarshal(body, &err)
 			checkErrorResponse(t, v.Name, err, expect)
-		case HostsResponse:
-			var hosts HostsResponse
+		case Host:
+			var host Host
 			body, _ := ioutil.ReadAll(res.Body)
-			json.Unmarshal(body, &hosts)
-
-			if hosts.Count != expect.Count {
-				t.Errorf("'%s': Wrong hosts count was returned. '%d' != '%d'", v.Name, hosts.Count, expect.Count)
-			}
-			for i := range hosts.Hosts {
-				checkHostResponse(t, v.Name, hosts.Hosts[i], expect.Hosts[i])
-			}
+			json.Unmarshal(body, &host)
+			checkHostResponse(t, v.Name, host, expect)
 		}
 	}
 }
