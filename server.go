@@ -14,7 +14,7 @@ import (
 func NewHTTPHandler() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/hosts", hostsHandler).Methods("GET", "POST")
-	r.HandleFunc("/hosts/{id}", hostHandler).Methods("GET", "PUT")
+	r.HandleFunc("/hosts/{id}", hostHandler).Methods("GET", "PUT", "DELETE")
 
 	return r
 }
@@ -29,15 +29,9 @@ func hostsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		res := make([]Host, len(hosts))
-		for i, host := range hosts {
-			res[i].Address = host.Address
-			res[i].Hostname = host.Hostname
-			res[i].Description = host.Description
-		}
 		replyJSON(w, http.StatusOK, HostsResponse{
-			Count: len(res),
-			Hosts: res,
+			Count: len(hosts),
+			Hosts: hosts,
 		})
 		return
 	case http.MethodPost:
@@ -110,6 +104,20 @@ func hostHandler(w http.ResponseWriter, r *http.Request) {
 		replyJSON(w, http.StatusOK, now)
 		return
 	case http.MethodDelete:
+		vars := mux.Vars(r)
+		var host Host
+		err = Conn.DB.Where("id = ?", vars["id"]).Find(&host).Error
+		if err != nil {
+			if err.Error() == "record not found" {
+				replyError(w, http.StatusInternalServerError, "Internal Server Error occured.")
+				return
+			}
+			replyError(w, http.StatusNotFound, fmt.Sprintf("ID \"%s\" not found", vars["id"]))
+			return
+		}
+		Conn.DB.Delete(&host)
+		replyJSON(w, http.StatusNoContent, nil)
+		return
 	}
 	replyError(w, http.StatusMethodNotAllowed, fmt.Sprintf("Method %s is not allowed in this URL", r.Method))
 }
@@ -118,10 +126,12 @@ func replyJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
-	encoder := json.NewEncoder(w)
-	err := encoder.Encode(data)
-	if err != nil {
-		replyError(w, http.StatusInternalServerError, "Internal Server Error occured.")
+	if data != nil {
+		encoder := json.NewEncoder(w)
+		err := encoder.Encode(data)
+		if err != nil {
+			replyError(w, http.StatusInternalServerError, "Internal Server Error occured.")
+		}
 	}
 }
 
