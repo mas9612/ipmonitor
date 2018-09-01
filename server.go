@@ -14,7 +14,7 @@ import (
 func NewHTTPHandler() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/hosts", hostsHandler).Methods("GET", "POST")
-	r.HandleFunc("/hosts/{id}", hostHandler).Methods("GET")
+	r.HandleFunc("/hosts/{id}", hostHandler).Methods("GET", "PUT")
 
 	return r
 }
@@ -82,6 +82,34 @@ func hostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		replyJSON(w, http.StatusOK, Host{ID: host.ID, Address: host.Address, Hostname: host.Hostname, Description: host.Description})
 		return
+	case http.MethodPut:
+		var host Host
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&host)
+		if err != nil {
+			replyError(w, http.StatusInternalServerError, "Internal Server Error occured.")
+			return
+		}
+		if host.Address == "" || host.Hostname == "" {
+			replyError(w, http.StatusBadRequest, "Key \"address\" and \"hostname\" are required")
+			return
+		}
+
+		vars := mux.Vars(r)
+		var now Host
+		err = Conn.DB.Where("id = ?", vars["id"]).Find(&now).Error
+		if err != nil && err.Error() != "record not found" {
+			replyError(w, http.StatusInternalServerError, "Internal Server Error occured.")
+			return
+		}
+		now.Address = host.Address
+		now.Hostname = host.Hostname
+		now.Description = host.Description
+		Conn.DB.Save(&now)
+
+		replyJSON(w, http.StatusOK, now)
+		return
+	case http.MethodDelete:
 	}
 	replyError(w, http.StatusMethodNotAllowed, fmt.Sprintf("Method %s is not allowed in this URL", r.Method))
 }

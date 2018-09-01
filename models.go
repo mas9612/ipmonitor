@@ -6,7 +6,7 @@ import (
 
 // Host represents host table in DB
 type Host struct {
-	ID          uint       `gorm:"primary_key"`
+	ID          uint       `gorm:"primary_key;AUTO_INCREMENT"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"-"`
 	DeletedAt   *time.Time `json:"-" sql:"index"`
