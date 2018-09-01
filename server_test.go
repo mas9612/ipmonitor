@@ -25,7 +25,8 @@ type TestHostValue struct {
 	Name     string
 	Method   string
 	Endpoint string
-	Expect   interface{}
+	Input    TestHostRequest
+	Expect   TestHostResponse
 }
 
 type TestHostRequest struct {
@@ -143,29 +144,52 @@ func TestHostHandler(t *testing.T) {
 			Name:     "Non-Integer Key",
 			Method:   "GET",
 			Endpoint: "/hosts/x",
-			Expect:   ErrorResponse{Status: http.StatusBadRequest, Message: "Key \"id\" must be integer"},
+			Expect:   TestHostResponse{StatusCode: http.StatusBadRequest, Response: ErrorResponse{Status: http.StatusBadRequest, Message: "Key \"id\" must be integer"}},
 		},
 		TestHostValue{
 			Name:     "Not Found Key",
 			Method:   "GET",
 			Endpoint: "/hosts/9999",
-			Expect:   ErrorResponse{Status: http.StatusNotFound, Message: "ID \"9999\" not found"},
+			// TODO: change to TestHostResponse to check status code
+			Expect: TestHostResponse{StatusCode: http.StatusNotFound, Response: ErrorResponse{Status: http.StatusNotFound, Message: "ID \"9999\" not found"}},
 		},
 		TestHostValue{
 			Name:     "Get first record",
 			Method:   "GET",
 			Endpoint: "/hosts/1",
-			Expect:   Host{ID: 1, Address: "10.1.240.151", Hostname: "k8s-01", Description: "k8s node #1"},
+			Expect:   TestHostResponse{StatusCode: http.StatusOK, Response: Host{ID: 1, Address: "10.1.240.151", Hostname: "k8s-01", Description: "k8s node #1"}},
+		},
+		TestHostValue{
+			Name:     "Update first record",
+			Method:   "PUT",
+			Endpoint: "/hosts/1",
+			Input:    TestHostRequest{Address: "10.1.240.102", Hostname: "k8s-02", Description: "k8s node #2 (IP changed)"},
+			Expect:   TestHostResponse{StatusCode: http.StatusOK, Response: Host{ID: 1, Address: "10.1.240.102", Hostname: "k8s-02", Description: "k8s node #2 (IP changed)"}},
+		},
+		TestHostValue{
+			Name:     "Delete first record",
+			Method:   "DELETE",
+			Endpoint: "/hosts/1",
+			Expect:   TestHostResponse{StatusCode: http.StatusNoContent},
 		},
 	}
 
 	for _, v := range values {
-		req := httptest.NewRequest(v.Method, v.Endpoint, nil)
+		var req *http.Request
+		if v.Method == "PUT" {
+			payload, _ := json.Marshal(v.Input)
+			req = httptest.NewRequest(v.Method, v.Endpoint, bytes.NewReader(payload))
+		} else {
+			req = httptest.NewRequest(v.Method, v.Endpoint, nil)
+		}
 		rr := httptest.NewRecorder()
 		router.ServeHTTP(rr, req)
 		res := rr.Result()
+		if res.StatusCode != v.Expect.StatusCode {
+			t.Errorf("'%s': Wrong status code was returned. '%d' != '%d'", v.Name, res.StatusCode, v.Expect.StatusCode)
+		}
 
-		switch expect := v.Expect.(type) {
+		switch expect := v.Expect.Response.(type) {
 		case ErrorResponse:
 			var err ErrorResponse
 			body, _ := ioutil.ReadAll(res.Body)

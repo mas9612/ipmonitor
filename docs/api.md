@@ -137,30 +137,30 @@ Update (or create if specified `id` not found) host record.
 ```
 
 ### Error
-* Status: 400 Bad Request (If `address` or `hostname` was not included in request body)
-* Response:
-```json
-{
-  "status": 400,
-  "message": "Key \"address\" and \"hostname\" are requied"
-}
-```
+1. If given JSON is not valid (failed to marshal JSON request)
+    - Status: 500 Internal Server Error
+    - Response:
+    ```json
+    {
+    "status": 500,
+    "message": "Internal Server Error occured."
+    }
+    ```
+1. If `address` or `hostname` was not included in request body
+    - Status: 400 Bad Request
+    - Response:
+    ```json
+    {
+    "status": 400,
+    "message": "Key \"address\" and \"hostname\" are requied"
+    }
+    ```
 
 ## DELETE /hosts/{id}
 Delete host record.
 
 ### Success
 * Status: 204 No Content
-* Response:
-```json
-{
-  "id": 1,
-  "created_at": "2018-08-29T00:00:00Z",
-  "address": "10.1.240.151",
-  "hostname": "k8s-01",
-  "description": "k8s node #1"
-}
-```
 
 ### Error
 1. If `id` is not integer
