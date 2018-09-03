@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/gorm"
 )
 
 // NewHTTPHandler returns *mux.Router
@@ -92,7 +93,7 @@ func hostHandler(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		var now Host
 		err = Conn.DB.Where("id = ?", vars["id"]).Find(&now).Error
-		if err != nil && err.Error() != "record not found" {
+		if err != nil && gorm.IsRecordNotFoundError(err) {
 			replyError(w, http.StatusInternalServerError, "Internal Server Error occured.")
 			return
 		}
@@ -108,7 +109,7 @@ func hostHandler(w http.ResponseWriter, r *http.Request) {
 		var host Host
 		err = Conn.DB.Where("id = ?", vars["id"]).Find(&host).Error
 		if err != nil {
-			if err.Error() == "record not found" {
+			if gorm.IsRecordNotFoundError(err) {
 				replyError(w, http.StatusInternalServerError, "Internal Server Error occured.")
 				return
 			}
